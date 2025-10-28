@@ -287,9 +287,9 @@ static inline void set_effect(uint8_t i)
 static inline void sleep_intr_init() {
   RCC->APB2PCENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC | RCC_APB2Periph_GPIOD;
   // GPIOA: Set to output
-//  GPIOA->CFGLR = ((GPIO_CNF_OUT_PP | GPIO_Speed_2MHz)<<(4*2)) |
-//    ((GPIO_CNF_OUT_PP | GPIO_Speed_2MHz)<<(4*1));
-//  GPIOA->BSHR = GPIO_BSHR_BS2 | GPIO_BSHR_BR1;
+  GPIOA->CFGLR = ((GPIO_CNF_OUT_PP | GPIO_Speed_2MHz)<<(4*2)) |
+    ((GPIO_CNF_OUT_PP | GPIO_Speed_2MHz)<<(4*1));
+  GPIOA->BSHR = GPIO_BSHR_BS2 | GPIO_BSHR_BR1;
   // GPIOC: Set to input with mixed pull-up / pull-down
 //  GPIOC->CFGLR = (GPIO_CNF_IN_PUPD<<(4*7)) |
 //    (GPIO_CNF_IN_PUPD<<(4*6)) |
@@ -354,36 +354,21 @@ int main()
   // Init systick
   systick_init();
 
-  // wake up 
+
   const char *start = "\x1c\x1d\x1e\x1f";
   led_show_array(start, strlen(start));
   const char *count_down = "543210";
 
   while (1)
   {
-    // kill irq before deep sleep
-    NVIC_DisableIRQ(SysTicK_IRQn); 
-    // put off all LEDs
-    for (uint8_t i = 0; i < LED_MATRIX_NUM_PINS; i++) {
-      GPIO_pinMode(pins[i], GPIO_pinMode_I_pullDown, GPIO_Speed_10MHz);
-    }
-    // GPIO C0 Push-Pull LOW
-	  RCC->APB2PCENR |= RCC_APB2Periph_GPIOC;
-	  GPIOC->CFGLR &= ~(0xf<<(4*0));
-	  GPIOC->CFGLR |= (GPIO_Speed_10MHz | GPIO_CNF_OUT_PP)<<(4*0);
-		GPIOC->BSHR = (1<<16); // LOW
     // dive into deep sleep
+    NVIC_DisableIRQ(SysTicK_IRQn); // kill irq first
+    for (uint8_t i = 0; i < LED_MATRIX_NUM_PINS; i++) {
+      GPIO_pinMode(pins[i], GPIO_pinMode_I_floating, GPIO_Speed_10MHz);
+    }
     __WFE();
 
-
     SystemInit();
-
-	  RCC->APB2PCENR |= RCC_APB2Periph_GPIOC;
-	  GPIOC->CFGLR &= ~(0xf<<(4*0));
-	  GPIOC->CFGLR |= (GPIO_Speed_10MHz | GPIO_CNF_OUT_PP)<<(4*0);
-		GPIOC->BSHR = (1<<0); // HIGH
-    Delay_Ms(100);
-
     led_matrix_init();
     systick_init();
 
@@ -408,14 +393,8 @@ int main()
 
     }
 
-    const char msg[] = "HelloWorld!GoodNight!\x1b\x1b\x1b\x1b\x1b";
     // \x1b == heart
-    for (uint8_t i = 0; i < sizeof(msg) / sizeof(msg[0]); i++)
-    {
-      led_putchar(msg[i]);
-      Delay_Ms(150);
-    }
-    const char *end = "\x1f\x1e\x1d\x1c";
-    led_show_array(end, strlen(end));
+    led_putchar('\x1b');
+    Delay_Ms(1000);
   }
 }

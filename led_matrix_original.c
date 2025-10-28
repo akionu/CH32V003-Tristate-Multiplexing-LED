@@ -343,7 +343,6 @@ static inline void sleep_intr_init() {
 int main()
 {
   SystemInit();
-  Delay_Ms(5000);
 
   // configure deep sleep
   sleep_intr_init();
@@ -354,39 +353,13 @@ int main()
   // Init systick
   systick_init();
 
-  // wake up 
+
   const char *start = "\x1c\x1d\x1e\x1f";
   led_show_array(start, strlen(start));
   const char *count_down = "543210";
 
   while (1)
   {
-    // kill irq before deep sleep
-    NVIC_DisableIRQ(SysTicK_IRQn); 
-    // put off all LEDs
-    for (uint8_t i = 0; i < LED_MATRIX_NUM_PINS; i++) {
-      GPIO_pinMode(pins[i], GPIO_pinMode_I_pullDown, GPIO_Speed_10MHz);
-    }
-    // GPIO C0 Push-Pull LOW
-	  RCC->APB2PCENR |= RCC_APB2Periph_GPIOC;
-	  GPIOC->CFGLR &= ~(0xf<<(4*0));
-	  GPIOC->CFGLR |= (GPIO_Speed_10MHz | GPIO_CNF_OUT_PP)<<(4*0);
-		GPIOC->BSHR = (1<<16); // LOW
-    // dive into deep sleep
-    __WFE();
-
-
-    SystemInit();
-
-	  RCC->APB2PCENR |= RCC_APB2Periph_GPIOC;
-	  GPIOC->CFGLR &= ~(0xf<<(4*0));
-	  GPIOC->CFGLR |= (GPIO_Speed_10MHz | GPIO_CNF_OUT_PP)<<(4*0);
-		GPIOC->BSHR = (1<<0); // HIGH
-    Delay_Ms(100);
-
-    led_matrix_init();
-    systick_init();
-
     led_show_array(count_down, strlen(count_down));
 
     // Run effects
@@ -410,11 +383,7 @@ int main()
 
     const char msg[] = "HelloWorld!GoodNight!\x1b\x1b\x1b\x1b\x1b";
     // \x1b == heart
-    for (uint8_t i = 0; i < sizeof(msg) / sizeof(msg[0]); i++)
-    {
-      led_putchar(msg[i]);
-      Delay_Ms(150);
-    }
+    led_show_array(msg, strlen(msg));
     const char *end = "\x1f\x1e\x1d\x1c";
     led_show_array(end, strlen(end));
   }
